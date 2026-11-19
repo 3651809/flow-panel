@@ -1,0 +1,13 @@
+{
+  "name": "flow-panel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "流量面板：多云流量余量采集、展示与 Prometheus 指标输出",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

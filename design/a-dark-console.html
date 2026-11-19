@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>方案 A · 深色控制台</title>
+<style>
+  :root{
+    --bg:#080b10; --rail:#0b1016; --panel:#0f151e; --panel-2:#131a24;
+    --line:#1c2431; --line-2:#27313f;
+    --text:#e9eef7; --muted:#8b98a9; --faint:#5d6a7a;
+    --accent:#22d3ee; --accent-2:#7c6cf5;
+    --ok:#34d399; --warn:#fbbf24; --crit:#f87171; --unknown:#64748b;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono,.num{font-variant-numeric:tabular-nums}
+
+  /* ---------------------------------------------------------- 左侧图标栏 */
+  .app{display:flex;min-height:100vh}
+  .rail{
+    width:60px;flex:none;background:var(--rail);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 0;
+  }
+  .rail .logo{
+    width:32px;height:32px;border-radius:9px;margin-bottom:14px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    display:grid;place-items:center;color:#04121a;font-weight:800;font-size:13px;
+  }
+  .rail a{
+    position:relative;width:38px;height:38px;border-radius:10px;
+    display:grid;place-items:center;color:var(--faint);text-decoration:none;
+    transition:color .15s,background .15s;
+  }
+  .rail a:hover{color:var(--text);background:var(--panel-2)}
+  .rail a.on{color:var(--accent);background:rgba(34,211,238,.09)}
+  .rail a.on::before{
+    content:"";position:absolute;left:-11px;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--accent);
+  }
+  .rail svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------------------------------------------------------- 主区 */
+  .main{flex:1;min-width:0;padding:20px 26px 40px}
+  .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+  .top h1{margin:0;font-size:17px;font-weight:600;letter-spacing:.2px}
+  .top .sub{color:var(--faint);font-size:12.5px}
+  .top .grow{flex:1}
+  .chips{display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:2px}
+  .chips span{
+    font-size:12.5px;color:var(--muted);padding:4px 11px;border-radius:7px;cursor:default;
+  }
+  .chips span.on{background:var(--panel-2);color:var(--text);box-shadow:0 0 0 1px var(--line-2)}
+  .btn{
+    height:32px;padding:0 13px;font:inherit;font-size:12.5px;border-radius:8px;
+    border:1px solid var(--line-2);background:var(--panel);color:var(--text);cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;transition:.15s;
+  }
+  .btn:hover{border-color:var(--faint);background:var(--panel-2)}
+  .btn.pri{
+    border-color:transparent;color:#04121a;font-weight:600;
+    background:linear-gradient(135deg,var(--accent),#4ed7ea);
+  }
+  .btn.pri:hover{filter:brightness(1.08)}
+  .demo-tag{
+    font-size:11px;color:var(--accent);border:1px solid rgba(34,211,238,.35);
+    background:rgba(34,211,238,.08);border-radius:99px;padding:3px 9px;
+  }
+
+  /* ---------------------------------------------------------- KPI */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px}
+  .kpi{
+    position:relative;overflow:hidden;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border:1px solid var(--line);border-radius:13px;padding:13px 15px 14px;
+  }
+  .kpi::after{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:var(--c,var(--accent));opacity:.85}
+  .kpi-label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .kpi-value{font-size:26px;font-weight:650;letter-spacing:-.5px;margin-top:3px;line-height:1.25}
+  .kpi-value small{font-size:13px;font-weight:400;color:var(--faint);margin-left:3px;letter-spacing:0}
+  .kpi-foot{font-size:11.5px;color:var(--faint);margin-top:2px}
+  .kpi-foot b{color:var(--muted);font-weight:500}
+
+  /* ---------------------------------------------------------- 实例卡片 */
+  .sec-head{display:flex;align-items:center;gap:9px;margin:22px 0 11px}
+  .sec-head h2{margin:0;font-size:13px;font-weight:600;color:var(--text)}
+  .sec-head .count{font-size:12px;color:var(--faint)}
+  .sec-head .grow{flex:1}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  .card{
+    position:relative;border:1px solid var(--line);border-radius:13px;
+    background:var(--panel);padding:13px 15px 12px;
+    transition:border-color .16s,transform .16s,box-shadow .16s;
+  }
+  .card:hover{border-color:var(--line-2);transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.35)}
+  .card.s-warn{border-color:rgba(251,191,36,.28);background:linear-gradient(180deg,rgba(251,191,36,.055),var(--panel) 55%)}
+  .card.s-crit{border-color:rgba(248,113,113,.30);background:linear-gradient(180deg,rgba(248,113,113,.065),var(--panel) 55%)}
+  .card .row1{display:flex;align-items:flex-start;gap:9px}
+  .card .pdot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:none;background:var(--ok)}
+  .s-warn .pdot{background:var(--warn)} .s-crit .pdot{background:var(--crit)} .s-unknown .pdot{background:var(--unknown)}
+  .card .name{font-size:13.5px;font-weight:600;word-break:break-all;line-height:1.45;flex:1}
+  .badge{
+    flex:none;font-size:11px;line-height:1;padding:4px 8px;border-radius:99px;
+    border:1px solid var(--line-2);color:var(--muted);
+  }
+  .badge.b-ok{color:var(--ok);border-color:rgba(52,211,153,.3);background:rgba(52,211,153,.1)}
+  .badge.b-warn{color:var(--warn);border-color:rgba(251,191,36,.32);background:rgba(251,191,36,.1)}
+  .badge.b-crit{color:var(--crit);border-color:rgba(248,113,113,.32);background:rgba(248,113,113,.1)}
+  .card .meta2{font-size:11.5px;color:var(--faint);margin-top:3px;word-break:break-all}
+
+  .card .body{display:flex;align-items:flex-end;gap:10px;margin-top:11px}
+  .card .big{font-size:25px;font-weight:650;letter-spacing:-.6px;line-height:1.15}
+  .card .big.na{color:var(--faint);font-weight:500}
+  .card .of{font-size:12px;color:var(--faint);padding-bottom:3px}
+  .card .spark{margin-left:auto;opacity:.9;padding-bottom:2px}
+
+  .track{height:5px;border-radius:99px;background:#1a222e;overflow:hidden;margin:10px 0 7px}
+  .track i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#22d3ee,#34d399);transition:width .4s}
+  .track i.warn{background:linear-gradient(90deg,#fbbf24,#f59e0b)}
+  .track i.crit{background:linear-gradient(90deg,#fb7185,#ef4444)}
+  .track.na{background:repeating-linear-gradient(45deg,#1a222e 0 4px,transparent 4px 8px)}
+  .card .foot{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--faint)}
+  .card .foot b{color:var(--muted);font-weight:500}
+
+  /* ---------------------------------------------------------- 明细表 */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{
+    text-align:left;font-weight:500;font-size:11.5px;letter-spacing:.4px;color:var(--faint);
+    text-transform:uppercase;padding:10px 14px;background:rgba(255,255,255,.017);border-bottom:1px solid var(--line);
+  }
+  td{padding:11px 14px;border-bottom:1px solid rgba(28,36,49,.75);color:var(--text)}
+  tr:last-child td{border-bottom:none}
+  tbody tr{transition:background .13s}
+  tbody tr:hover{background:rgba(255,255,255,.025)}
+  td.dim{color:var(--muted)}
+  .prov{display:inline-flex;align-items:center;gap:7px}
+  .prov i{width:6px;height:6px;border-radius:2px;display:block;flex:none}
+  .hbar{width:110px;height:4px;border-radius:99px;background:#1a222e;overflow:hidden;display:inline-block;vertical-align:middle}
+  .hbar i{display:block;height:100%}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="logo">T</div>
+    <a class="on" title="概览"><svg viewBox="0 0 24 24"><path d="M3 13h5v8H3zM10 3h5v18h-5zM17 9h4v12h-4z"/></svg></a>
+    <a title="实例"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg></a>
+    <a title="告警"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 9v4M12 16.5h.01"/></svg></a>
+    <a title="设置"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></a>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <h1>流量总览</h1>
+      <span class="demo-tag">设计稿 · 示例数据</span>
+      <span class="sub">采集于 2 分钟前 · 每 10 分钟</span>
+      <span class="grow"></span>
+      <div class="chips"><span>今日</span><span class="on">7 天</span><span>30 天</span></div>
+      <button class="btn">刷新</button>
+      <button class="btn pri">立即采集</button>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="sec-head">
+      <h2>实例流量</h2><span class="count" id="gcount"></span>
+      <span class="grow"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <div class="sec-head"><h2>明细</h2></div>
+    <div class="panel">
+      <table>
+        <thead><tr><th>实例</th><th>云厂商</th><th>区域</th><th>剩余</th><th>用量</th><th>状态</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROVIDER = {
+  huawei:  { title: '华为云', color: '#E8262D' },
+  tencent: { title: '腾讯云', color: '#0052D9' }
+};
+
+const DATA = [
+  { p:'huawei', name:'Ubuntu-cn-east-3-xY9z', region:'cn-east-3', remain:4.2, total:100, used:95.8, unit:'GB', st:'crit',
+    trend:[100,95,80,60,40,20,4.2] },
+  { p:'huawei', name:'CentOS-cn-north-4-aB7c', region:'cn-north-4', remain:12.3, total:100, used:87.7, unit:'GB', st:'warn',
+    trend:[100,90,78,65,45,30,12.3] },
+  { p:'huawei', name:'Debian-cn-southwest-2-fRe8', region:'cn-southwest-2', remain:98.48, total:100, used:1.52, unit:'GB', st:'ok',
+    trend:[100,99.9,99.6,99.3,99,98.7,98.48] },
+  { p:'huawei', name:'Debian-cn-south-1-mN4q', region:'cn-south-1', remain:null, total:null, used:null, unit:'', st:'unknown',
+    trend:[] },
+  { p:'tencent', name:'lhins-abc123', region:'ap-guangzhou', remain:620, total:1024, used:39.45, unit:'GB', st:'ok',
+    trend:[1024,1000,950,880,800,700,620] }
+];
+
+const ST = { ok:['正常','b-ok','#34d399'], warn:['预警','b-warn','#fbbf24'], crit:['严重','b-crit','#f87171'], unknown:['无数据','','#64748b'] };
+const fmt = (n) => n === null || n === undefined ? '-' : String(Math.round(n * 100) / 100);
+
+function spark(vals, w, h, color) {
+  if (!vals || vals.length < 2) {
+    return '<svg width="'+w+'" height="'+h+'"><line x1="0" y1="'+(h/2)+'" x2="'+w+'" y2="'+(h/2)+'" stroke="#27313f" stroke-width="1.5" stroke-dasharray="3 3"/></svg>';
+  }
+  const max = Math.max(...vals), min = Math.min(...vals), span = (max - min) || 1;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * (w - 2) + 1;
+    const y = h - 2 - ((v - min) / span) * (h - 5);
+    return [x.toFixed(1), y.toFixed(1)];
+  });
+  const line = pts.map((p) => p.join(',')).join(' ');
+  return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'">' +
+    '<polygon points="1,'+(h-2)+' '+line+' '+(w-1)+','+(h-2)+'" fill="'+color+'" opacity=".13"/>' +
+    '<polyline points="'+line+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '<circle cx="'+pts[pts.length-1][0]+'" cy="'+pts[pts.length-1][1]+'" r="2.1" fill="'+color+'"/>' +
+    '</svg>';
+}
+
+/* ---------------------------------------------------------------- KPI */
+const unknown = DATA.filter((d) => d.st === 'unknown').length;
+const warns = DATA.filter((d) => d.st === 'warn').length;
+const crits = DATA.filter((d) => d.st === 'crit').length;
+const hw = DATA.filter((d) => d.p === 'huawei').length;
+const tx = DATA.filter((d) => d.p === 'tencent').length;
+
+document.getElementById('kpis').innerHTML = [
+  { c:'var(--accent)', label:'监控实例', value: DATA.length, unit:' 台', foot: '华为云 <b>'+hw+'</b> · 腾讯云 <b>'+tx+'</b>' },
+  { c:'var(--crit)', label:'严重告警', value: crits, unit:' 项', foot: crits ? '剩余不足 10%，即将耗尽' : '无' },
+  { c:'var(--warn)', label:'预警', value: warns, unit:' 项', foot: warns ? '剩余不足 20%' : '无' },
+  { c:'var(--accent-2)', label:'未采集到流量包', value: unknown, unit:' 台', foot: '实例接口无数据' }
+].map((k) =>
+  '<div class="kpi" style="--c:'+k.c+'">' +
+    '<div class="kpi-label">'+k.label+'</div>' +
+    '<div class="kpi-value">'+k.value+'<small>'+k.unit+'</small></div>' +
+    '<div class="kpi-foot">'+k.foot+'</div>' +
+  '</div>'
+).join('');
+
+/* ---------------------------------------------------------------- 卡片 */
+document.getElementById('gcount').textContent = DATA.length + ' 项 · 按告警等级排序';
+
+document.getElementById('grid').innerHTML = DATA.map((d) => {
+  const st = ST[d.st];
+  const known = d.remain !== null;
+  const pct = d.used === null ? null : Math.min(100, Math.max(0, d.used));
+  const barCls = d.st === 'crit' ? 'crit' : d.st === 'warn' ? 'warn' : '';
+  const p = PROVIDER[d.p];
+
+  return '<article class="card s-'+d.st+'">' +
+    '<div class="row1">' +
+      '<span class="pdot"></span>' +
+      '<div class="name">'+d.name+'</div>' +
+      (d.st === 'unknown' ? '<span class="badge">无数据</span>' : '<span class="badge '+st[1]+'">'+st[0]+'</span>') +
+    '</div>' +
+    '<div class="meta2">'+p.title+' · '+d.region+' · 流量</div>' +
+    '<div class="body">' +
+      '<div class="big '+(known ? '' : 'na')+'">'+fmt(d.remain)+'</div>' +
+      (known ? '<div class="of">/ '+fmt(d.total)+' '+d.unit+'</div>'
+             : '<div class="of">未查到流量包</div>') +
+      '<div class="spark">'+spark(d.trend, 88, 34, known ? st[2] : '#3a4553')+'</div>' +
+    '</div>' +
+    (pct === null
+      ? '<div class="track na"></div>'
+      : '<div class="track"><i class="'+barCls+'" style="width:'+pct+'%"></i></div>') +
+    '<div class="foot">' +
+      '<span>已用 <b>'+(pct === null ? '-' : pct + '%')+'</b></span>' +
+      '<span>周期至 <b>12-01 23:59</b></span>' +
+    '</div>' +
+  '</article>';
+}).join('');
+
+/* ---------------------------------------------------------------- 表格 */
+document.getElementById('rows').innerHTML = DATA.map((d) => {
+  const st = ST[d.st];
+  const known = d.remain !== null;
+  const pct = d.used === null ? 0 : d.used;
+  const color = st[2];
+  const p = PROVIDER[d.p];
+  return '<tr>' +
+    '<td>'+d.name+'</td>' +
+    '<td class="dim"><span class="prov"><i style="background:'+p.color+'"></i>'+p.title+'</span></td>' +
+    '<td class="dim">'+d.region+'</td>' +
+    '<td class="num">'+(known ? fmt(d.remain)+' <span style="color:var(--faint)">'+d.unit+'</span>' : '<span style="color:var(--faint)">-</span>')+'</td>' +
+    '<td>' +
+      '<span class="hbar"><i style="width:'+pct+'%;background:'+color+'"></i></span>' +
+      '<span class="num" style="margin-left:8px;color:var(--muted)">'+(d.used === null ? '-' : d.used+'%')+'</span>' +
+    '</td>' +
+    '<td>'+(d.st === 'unknown' ? '<span class="badge">无数据</span>' : '<span class="badge '+st[1]+'">'+st[0]+'</span>')+'</td>' +
+  '</tr>';
+}).join('');
+</script>
+</body>
+</html>

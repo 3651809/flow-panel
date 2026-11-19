@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>方案 C · 环形仪表盘</title>
+<style>
+  :root{
+    --bg:#f1f3f6; --panel:#fff; --line:#e6e9ee; --line-2:#dbe0e7;
+    --text:#111827; --muted:#6b7280; --faint:#9aa3ae;
+    --brand:#1a56db; --brand-soft:#eef3fe;
+    --ok:#12a150; --warn:#e08700; --crit:#d92d20; --unknown:#a3acb8;
+    --sh:0 1px 2px rgba(16,24,40,.04), 0 4px 14px rgba(16,24,40,.06);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-variant-numeric:tabular-nums}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px 56px}
+
+  /* --------------------------------------------------------- 顶部横幅 */
+  .hero{
+    background:linear-gradient(118deg,#e7effd 0%,#f3f7ff 46%,#fbfcff 100%);
+    border-bottom:1px solid #e3e9f4;
+  }
+  .hero-in{max-width:1120px;margin:0 auto;padding:22px 24px 18px}
+  .hero-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .hero h1{margin:0;font-size:19px;font-weight:650;letter-spacing:-.01em}
+  .demo{
+    font-size:11px;color:var(--brand);background:#fff;border:1px solid #d3e0fa;
+    border-radius:99px;padding:3px 10px;box-shadow:0 1px 2px rgba(26,86,219,.08);
+  }
+  .hero .stamp{font-size:12.5px;color:#5b6b85}
+  .hero .grow{flex:1}
+  .btn{
+    height:34px;padding:0 15px;font:inherit;font-size:13px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line-2);background:#fff;color:var(--text);
+    box-shadow:0 1px 2px rgba(16,24,40,.05);transition:.15s;
+  }
+  .btn:hover{border-color:#c3cad4;box-shadow:0 2px 6px rgba(16,24,40,.08)}
+  .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(26,86,219,.28)}
+  .btn.pri:hover{filter:brightness(1.06)}
+
+  .hero-kpis{display:flex;gap:34px;flex-wrap:wrap;margin-top:16px}
+  .hk .k{font-size:12px;color:#5b6b85}
+  .hk .v{font-size:22px;font-weight:650;letter-spacing:-.02em}
+  .hk .v small{font-size:12px;font-weight:400;color:#7b8798;margin-left:2px}
+
+  /* --------------------------------------------------------- 筛选 */
+  .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:20px 0 16px}
+  .chip{
+    display:inline-flex;align-items:center;gap:6px;
+    height:31px;padding:0 13px;border-radius:9px;cursor:default;
+    background:#fff;border:1px solid var(--line);color:var(--muted);font-size:12.5px;
+    box-shadow:0 1px 1px rgba(16,24,40,.03);transition:.15s;
+  }
+  .chip:hover{border-color:#c9d0da;color:var(--text)}
+  .chip.on{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(26,86,219,.25)}
+  .chip i{width:6px;height:6px;border-radius:50%;display:block}
+  .chip .n{opacity:.7;font-size:11.5px}
+  .filters .grow{flex:1}
+  .filters .hint{font-size:12px;color:var(--faint)}
+
+  /* --------------------------------------------------------- 卡片 */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .card{
+    position:relative;display:flex;gap:16px;align-items:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:16px 18px;box-shadow:var(--sh);
+    transition:transform .16s,box-shadow .16s,border-color .16s;
+  }
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(16,24,40,.05),0 12px 28px rgba(16,24,40,.1);border-color:#d7dde6}
+  .card.s-warn{border-color:#f6e0b8}
+  .card.s-crit{border-color:#f6cfcc}
+
+  .donut{
+    --p:0; --c:var(--ok);
+    position:relative;width:94px;height:94px;flex:none;border-radius:50%;
+    background:conic-gradient(var(--c) calc(var(--p) * 1%), #e9edf2 0);
+    display:grid;place-items:center;
+  }
+  .donut::after{content:"";position:absolute;inset:10px;border-radius:50%;background:#fff}
+  .donut .in{position:relative;z-index:1;text-align:center;line-height:1.1}
+  .donut .in b{font-size:19px;font-weight:650;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .donut .in span{display:block;font-size:10.5px;color:var(--faint);margin-top:2px;white-space:nowrap}
+  .donut.na{background:repeating-conic-gradient(#e9edf2 0 12deg,#f4f6f9 12deg 24deg)}
+
+  .info{min-width:0;flex:1}
+  /* 徽标是绝对定位浮在右上角，名字要给右边留出它的位置，否则长实例名会被压住。
+     单行省略而不是换行：换行会把卡片撑得高低不齐，真实控制台也这么做，全名放 title 里 */
+  .info .nm{font-size:14px;font-weight:600;letter-spacing:-.01em;line-height:1.4;padding-right:56px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .info .rg{font-size:11.5px;color:var(--faint);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .info .rg i{width:6px;height:6px;border-radius:2px;display:block}
+  .info .amt{margin-top:6px;font-size:12px;color:var(--muted)}
+
+  .badge{
+    position:absolute;top:13px;right:14px;
+    font-size:11px;line-height:1;padding:4px 9px;border-radius:99px;
+    border:1px solid var(--line);color:var(--muted);background:#fff;
+  }
+  .badge.b-ok{color:var(--ok);border-color:#c9ebd7;background:#f2fbf5}
+  .badge.b-warn{color:var(--warn);border-color:#f8e3ba;background:#fffaf0}
+  .badge.b-crit{color:var(--crit);border-color:#f8d3cf;background:#fef4f3}
+
+  /* --------------------------------------------------------- 表格 */
+  .panel{margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh);overflow:hidden}
+  .panel .ph{display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line)}
+  .panel .ph h2{margin:0;font-size:13px;font-weight:600}
+  .panel .ph .grow{flex:1}
+  .panel .ph .hint{font-size:12px;color:var(--faint)}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{
+    text-align:left;font-weight:500;font-size:11.5px;color:var(--faint);
+    padding:9px 18px;background:#fafbfc;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  td{padding:11px 18px;border-bottom:1px solid #f1f3f6}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:#fafbfc}
+  td.dim{color:var(--muted)}
+  .prov{display:inline-flex;align-items:center;gap:7px}
+  .prov i{width:6px;height:6px;border-radius:2px;display:block}
+  .hbar{width:96px;height:5px;border-radius:99px;background:#eef1f5;overflow:hidden;display:inline-block;vertical-align:middle}
+  .hbar i{display:block;height:100%;border-radius:99px}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-in">
+    <div class="hero-top">
+      <h1>云主机流量</h1>
+      <span class="demo">设计稿 · 示例数据</span>
+      <span class="stamp">采集于 2 分钟前 · 每 10 分钟自动采集</span>
+      <span class="grow"></span>
+      <button class="btn">刷新</button>
+      <button class="btn pri">立即采集</button>
+    </div>
+    <div class="hero-kpis" id="hkpis"></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="filters">
+    <span class="chip on">全部 <span class="n">5</span></span>
+    <span class="chip"><i style="background:#E8262D"></i>华为云 <span class="n">4</span></span>
+    <span class="chip"><i style="background:#0052D9"></i>腾讯云 <span class="n">1</span></span>
+    <span class="chip">只看告警 <span class="n">2</span></span>
+    <span class="grow"></span>
+    <span class="hint">周期按月，剩余 = 套餐流量 − 已用</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="panel">
+    <div class="ph"><h2>实例明细</h2><span class="grow"></span><span class="hint">共 5 项</span></div>
+    <table>
+      <thead><tr><th>实例</th><th>云厂商</th><th>区域</th><th>剩余</th><th>用量</th><th>周期结束</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const P = { huawei:{t:'华为云', c:'#E8262D'}, tencent:{t:'腾讯云', c:'#0052D9'} };
+const DATA = [
+  { p:'huawei', name:'Ubuntu-cn-east-3-xY9z', region:'cn-east-3', remain:4.2, total:100, used:95.8, unit:'GB', st:'crit', end:'2026-12-01' },
+  { p:'huawei', name:'CentOS-cn-north-4-aB7c', region:'cn-north-4', remain:12.3, total:100, used:87.7, unit:'GB', st:'warn', end:'2026-12-01' },
+  { p:'huawei', name:'Debian-cn-southwest-2-fRe8', region:'cn-southwest-2', remain:98.48, total:100, used:1.52, unit:'GB', st:'ok', end:'2026-12-01' },
+  { p:'huawei', name:'Debian-cn-south-1-mN4q', region:'cn-south-1', remain:null, total:null, used:null, unit:'', st:'unknown', end:null },
+  { p:'tencent', name:'lhins-abc123', region:'ap-guangzhou', remain:620, total:1024, used:39.45, unit:'GB', st:'ok', end:'2026-12-01' }
+];
+const T = { ok:'正常', warn:'预警', crit:'严重', unknown:'无数据' };
+const C = { ok:'#12a150', warn:'#e08700', crit:'#d92d20', unknown:'#a3acb8' };
+const fmt = (n) => n === null || n === undefined ? '-' : String(Math.round(n * 100) / 100);
+
+const crits = DATA.filter((d) => d.st === 'crit').length;
+const warns = DATA.filter((d) => d.st === 'warn').length;
+
+document.getElementById('hkpis').innerHTML = [
+  { k:'监控实例', v:DATA.length, u:'台' },
+  { k:'严重告警', v:crits, u:'项' },
+  { k:'预警', v:warns, u:'项' }
+].map((x) => '<div class="hk"><div class="k">'+x.k+'</div><div class="v num">'+x.v+'<small>'+x.u+'</small></div></div>').join('');
+
+/* 卡片只做概览：环形图看比例、中心给"还剩多少"、右列给名字/厂商/已用。
+   区域、周期结束这些细节归表格，避免同一份数据在两个地方各说一遍。
+   顺带修掉一个语义错位：原来圆环按"已用"填充、中心却写"剩余%"，一个标识满=快用完、
+   另一个数字却是 4%，读起来自相矛盾；现在中心改成绝对余量，不再和环的填充反着说。 */
+document.getElementById('grid').innerHTML = DATA.map((d) => {
+  const p = P[d.p], known = d.remain !== null;
+  const pct = d.used === null ? 0 : Math.min(100, Math.max(0, d.used));
+  const donut = known
+    ? '<div class="donut" style="--p:'+pct+';--c:'+C[d.st]+'">' +
+        '<div class="in"><b>'+fmt(d.remain)+'</b><span>'+d.unit+' 剩余</span></div>' +
+      '</div>'
+    : '<div class="donut na"><div class="in"><b style="color:var(--faint)">—</b></div></div>';
+
+  return '<article class="card s-'+d.st+'">' +
+    donut +
+    '<div class="info">' +
+      '<div class="nm" title="'+d.name+'">'+d.name+'</div>' +
+      '<div class="rg"><i style="background:'+p.c+'"></i>'+p.t+'</div>' +
+      '<div class="amt">' + (known ? '已用 '+d.used+'% · 共 '+fmt(d.total)+' '+d.unit : '未查到流量包') + '</div>' +
+    '</div>' +
+    (d.st === 'unknown' ? '<span class="badge">无数据</span>' : '<span class="badge b-'+d.st+'">'+T[d.st]+'</span>') +
+  '</article>';
+}).join('');
+
+/* 表格 */
+document.getElementById('rows').innerHTML = DATA.map((d) => {
+  const p = P[d.p], known = d.remain !== null;
+  const pct = d.used === null ? 0 : d.used;
+  return '<tr>' +
+    '<td>'+d.name+'</td>' +
+    '<td class="dim"><span class="prov"><i style="background:'+p.c+'"></i>'+p.t+'</span></td>' +
+    '<td class="dim">'+d.region+'</td>' +
+    '<td class="num">'+(known ? fmt(d.remain)+' <span style="color:var(--faint)">'+d.unit+'</span>' : '<span style="color:var(--faint)">-</span>')+'</td>' +
+    '<td><span class="hbar"><i style="width:'+pct+'%;background:'+C[d.st]+'"></i></span>' +
+      '<span class="num" style="margin-left:9px;color:var(--muted)">'+(d.used === null ? '-' : d.used+'%')+'</span></td>' +
+    '<td class="dim">'+(d.end || '-')+'</td>' +
+  '</tr>';
+}).join('');
+</script>
+</body>
+</html>

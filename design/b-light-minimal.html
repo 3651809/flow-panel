@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>方案 B · 浅色极简</title>
+<style>
+  :root{
+    --bg:#fbfbfc; --panel:#fff; --line:#ececf0; --line-2:#e2e2e8;
+    --text:#0f1115; --muted:#6b7280; --faint:#9ca3af;
+    --accent:#2563eb;
+    --ok:#16a34a; --warn:#d97706; --crit:#dc2626; --unknown:#9ca3af;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--text);
+    font:14px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 64px}
+
+  /* ------------------------------------------------------------- 顶栏 */
+  header{
+    position:sticky;top:0;z-index:9;background:rgba(251,251,252,.86);
+    backdrop-filter:saturate(1.5) blur(12px);border-bottom:1px solid var(--line);
+  }
+  .bar{max-width:1080px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .bar h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.01em}
+  .tag{
+    font-size:11px;color:var(--accent);background:#eef3ff;border:1px solid #dbe6ff;
+    border-radius:99px;padding:3px 9px;
+  }
+  .bar .sub{font-size:12.5px;color:var(--faint)}
+  .bar .grow{flex:1}
+  .seg{display:flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden;background:#fff}
+  .seg span{font-size:12.5px;color:var(--muted);padding:5px 12px;border-right:1px solid var(--line)}
+  .seg span:last-child{border-right:0}
+  .seg span.on{background:#f4f5f7;color:var(--text);font-weight:500}
+  .btn{
+    height:33px;padding:0 14px;font:inherit;font-size:12.5px;border-radius:8px;cursor:pointer;
+    border:1px solid var(--line-2);background:#fff;color:var(--text);transition:.14s;
+  }
+  .btn:hover{background:#f7f7f9;border-color:#d4d4dc}
+  .btn.pri{background:var(--text);border-color:var(--text);color:#fff}
+  .btn.pri:hover{background:#26282e}
+
+  /* ------------------------------------------------------------- KPI */
+  .kpis{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+    border:1px solid var(--line);border-radius:12px;background:#fff;margin:26px 0 30px;overflow:hidden;
+  }
+  .kpi{padding:16px 20px;border-right:1px solid var(--line)}
+  .kpi:last-child{border-right:0}
+  .kpi .k{font-size:12px;color:var(--muted)}
+  .kpi .v{font-size:27px;font-weight:600;letter-spacing:-.03em;line-height:1.3;margin-top:2px}
+  .kpi .v small{font-size:12.5px;font-weight:400;color:var(--faint);margin-left:2px;letter-spacing:0}
+  .kpi .d{font-size:11.5px;color:var(--faint);margin-top:1px}
+  .kpi .d.warn{color:var(--warn)} .kpi .d.crit{color:var(--crit)}
+
+  /* ------------------------------------------------------------- 区块标题 */
+  .sec{display:flex;align-items:baseline;gap:10px;margin:0 0 10px}
+  .sec h2{margin:0;font-size:12.5px;font-weight:600;letter-spacing:.02em}
+  .sec .c{font-size:12px;color:var(--faint)}
+  .sec .grow{flex:1}
+  .sec .lnk{font-size:12px;color:var(--muted)}
+
+  /* ------------------------------------------------------------- 列表 */
+  .list{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .row{
+    display:grid;grid-template-columns:3px 1fr 168px 176px 66px;
+    align-items:center;gap:16px;padding:13px 18px 13px 0;
+    border-bottom:1px solid var(--line);position:relative;transition:background .12s;
+  }
+  .row:last-child{border-bottom:0}
+  .row:hover{background:#fafafb}
+  .row::before{
+    content:"";grid-column:1;width:3px;height:26px;border-radius:0 2px 2px 0;background:transparent;
+  }
+  .row.s-crit::before{background:var(--crit)} .row.s-warn::before{background:var(--warn)}
+  .row.s-ok::before{background:#e5e7eb} .row.s-unknown::before{background:transparent}
+
+  .who{grid-column:2;min-width:0}
+  .who .nm{font-size:13.5px;font-weight:550;letter-spacing:-.01em;word-break:break-all}
+  .who .rg{font-size:11.5px;color:var(--faint);margin-top:1px}
+  .who .rg i{display:inline-block;width:5px;height:5px;border-radius:2px;margin-right:5px;vertical-align:1px}
+
+  .amt{grid-column:3;text-align:right}
+  .amt b{font-size:16px;font-weight:600;letter-spacing:-.02em}
+  .amt b.na{color:var(--faint);font-weight:400}
+  .amt span{font-size:11.5px;color:var(--faint);margin-left:3px}
+
+  .prog{grid-column:4}
+  .prog .t{height:3px;border-radius:99px;background:#eff0f3;overflow:hidden}
+  .prog .t i{display:block;height:100%;border-radius:99px;background:#d1d5db}
+  .prog .t i.ok{background:var(--ok)} .prog .t i.warn{background:var(--warn)} .prog .t i.crit{background:var(--crit)}
+  .prog .t.na{background:repeating-linear-gradient(45deg,#eff0f3 0 3px,transparent 3px 6px)}
+  .prog .p{font-size:11px;color:var(--faint);margin-top:4px;display:flex;justify-content:space-between}
+  .prog .p b{color:var(--muted);font-weight:500}
+
+  .st{grid-column:5;text-align:right;font-size:12px;color:var(--muted);white-space:nowrap}
+  .st .d{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:1px}
+  .st.ok .d{background:var(--ok)} .st.warn .d{background:var(--warn)}
+  .st.crit .d{background:var(--crit)} .st.unknown .d{background:var(--unknown)}
+  .st.crit{color:var(--crit)} .st.warn{color:var(--warn)}
+
+  /* ------------------------------------------------------------- 双列 */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:30px}
+  @media (max-width:820px){ .two{grid-template-columns:1fr} .row{grid-template-columns:3px 1fr 100px;} .prog,.st{display:none} }
+  .card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h3{margin:0 0 12px;font-size:12.5px;font-weight:600;letter-spacing:.02em}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+  .kv:last-child{border-bottom:0;padding-bottom:0}
+  .kv .k{color:var(--muted)}
+  .kv .v{color:var(--text);text-align:right;word-break:break-all}
+  .kv code{font-size:12px;background:#f6f7f9;border:1px solid var(--line);border-radius:5px;padding:1px 6px}
+  .muted{color:var(--faint)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <h1>云主机流量</h1>
+    <span class="tag">设计稿 · 示例数据</span>
+    <span class="sub">采集于 2 分钟前 · 每 10 分钟</span>
+    <span class="grow"></span>
+    <div class="seg"><span>今日</span><span class="on">7 天</span><span>30 天</span></div>
+    <button class="btn">刷新</button>
+    <button class="btn pri">立即采集</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="kpis" id="kpis"></div>
+
+  <div class="sec">
+    <h2>实例</h2><span class="c" id="cnt"></span>
+    <span class="grow"></span><span class="lnk">按告警等级排序</span>
+  </div>
+  <div class="list" id="list"></div>
+
+  <div class="two">
+    <div class="card">
+      <h3>账号</h3>
+      <div class="kv"><span class="k">华为云-主账号 · hw-main</span><span class="v">4 台 · <span style="color:var(--crit)">2 项告警</span></span></div>
+      <div class="kv"><span class="k">腾讯云-轻量 · tx-lh</span><span class="v">1 台 · 正常</span></div>
+      <div class="kv"><span class="k">AK 存储</span><span class="v muted">AES-256-GCM 加密</span></div>
+    </div>
+    <div class="card">
+      <h3>采集端点</h3>
+      <div class="kv"><span class="k"><code>/pull</code></span><span class="v muted">Prometheus 文本</span></div>
+      <div class="kv"><span class="k"><code>/pull?format=json</code></span><span class="v muted">JSON，按厂商分组</span></div>
+      <div class="kv"><span class="k">上次采集</span><span class="v">2 分钟前 · 成功 · 5 项</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const P = { huawei:{t:'华为云', c:'#E8262D'}, tencent:{t:'腾讯云', c:'#0052D9'} };
+const DATA = [
+  { p:'huawei', name:'Ubuntu-cn-east-3-xY9z', region:'cn-east-3', remain:4.2, total:100, used:95.8, unit:'GB', st:'crit' },
+  { p:'huawei', name:'CentOS-cn-north-4-aB7c', region:'cn-north-4', remain:12.3, total:100, used:87.7, unit:'GB', st:'warn' },
+  { p:'huawei', name:'Debian-cn-southwest-2-fRe8', region:'cn-southwest-2', remain:98.48, total:100, used:1.52, unit:'GB', st:'ok' },
+  { p:'huawei', name:'Debian-cn-south-1-mN4q', region:'cn-south-1', remain:null, total:null, used:null, unit:'', st:'unknown' },
+  { p:'tencent', name:'lhins-abc123', region:'ap-guangzhou', remain:620, total:1024, used:39.45, unit:'GB', st:'ok' }
+];
+const LAST = { ok:'正常', warn:'预警', crit:'严重', unknown:'无数据' };
+const fmt = (n) => n === null || n === undefined ? '-' : String(Math.round(n * 100) / 100);
+
+const warns = DATA.filter((d) => d.st === 'warn').length;
+const crits = DATA.filter((d) => d.st === 'crit').length;
+
+document.getElementById('kpis').innerHTML = [
+  { k:'监控实例', v:DATA.length, u:'台', d:'华为云 4 · 腾讯云 1', cls:'' },
+  { k:'严重', v:crits, u:'项', d: crits ? '剩余不足 10%' : '无', cls:'crit' },
+  { k:'预警', v:warns, u:'项', d: warns ? '剩余不足 20%' : '无', cls:'warn' },
+  { k:'无数据', v:1, u:'台', d:'未查到流量包', cls:'' }
+].map((x) =>
+  '<div class="kpi"><div class="k">'+x.k+'</div>' +
+  '<div class="v num">'+x.v+'<small>'+x.u+'</small></div>' +
+  '<div class="d '+x.cls+'">'+x.d+'</div></div>'
+).join('');
+
+document.getElementById('cnt').textContent = DATA.length + ' 项';
+
+document.getElementById('list').innerHTML = DATA.map((d) => {
+  const p = P[d.p], known = d.remain !== null;
+  const pct = d.used === null ? null : Math.min(100, Math.max(0, d.used));
+  return '<div class="row s-'+d.st+'">' +
+    '<div class="who">' +
+      '<div class="nm">'+d.name+'</div>' +
+      '<div class="rg"><i style="background:'+p.c+'"></i>'+p.t+' · '+d.region+' · 流量</div>' +
+    '</div>' +
+    '<div class="amt num">' + (known ? '<b>'+fmt(d.remain)+'</b><span>/ '+fmt(d.total)+' '+d.unit+'</span>' : '<b class="na">-</b><span>未查到</span>') + '</div>' +
+    '<div class="prog">' +
+      (pct === null ? '<div class="t na"></div>' : '<div class="t"><i class="'+d.st+'" style="width:'+pct+'%"></i></div>') +
+      '<div class="p"><span>已用</span><b>'+(pct === null ? '-' : pct + '%')+'</b></div>' +
+    '</div>' +
+    '<div class="st '+d.st+'"><span class="d"></span>'+LAST[d.st]+'</div>' +
+  '</div>';
+}).join('');
+</script>
+</body>
+</html>
